@@ -15,8 +15,6 @@ A professional and responsive **Drag-and-Drop Website Builder** built using **Re
 - 🎨 **Fully Customizable** components and layout
 
 ---
-
-## 📁 Project Structure
 ## 🚀 Getting Started
 
 ### 1. Clone the Repository
