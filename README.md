@@ -1,16 +1,30 @@
-<<<<<<< HEAD
-# drag-dro-web-builder
-=======
-# React + Vite
+# 🛠️ Drag-and-Drop Website Builder
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A professional and responsive **Drag-and-Drop Website Builder** built using **React**, **Tailwind CSS**, and **React DnD**. Easily create web pages by dragging, editing, resizing, duplicating, and managing elements on a customizable canvas.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## ✨ Features
 
-## Expanding the ESLint configuration
+- 📱 **Responsive UI** with mobile support
+- 🧱 **Draggable Components** (Text, Image, Container)
+- 🖊️ **Edit Properties** like text, font, color, background, and more
+- 🔁 **Duplicate & Delete Elements**
+- 💾 **Save & Load Layout** to retain your designs
+- 📏 **Resizable Elements** with drag handles
+- 🎨 **Fully Customizable** components and layout
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
->>>>>>> 59ea6a5 (Initial commit)
+---
+
+## 📁 Project Structure
+## 🚀 Getting Started
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/your-username/drag-drop-website-builder.git
+cd drag-drop-website-builder
+npm install
+npm run dev
+
+
