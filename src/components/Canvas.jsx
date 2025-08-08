@@ -2,6 +2,9 @@
 import React, { useRef, useEffect, useState } from "react";
 import Element from "./Element";
 
+const GRID_SIZE = 20;
+const snap = (val) => Math.round(val / GRID_SIZE) * GRID_SIZE;
+
 export default function Canvas({
   elements,
   setElements,
@@ -18,15 +21,18 @@ export default function Canvas({
       setScale(1);
       return;
     }
+
     if (!canvasRef.current) return;
-    // Find max x/y of elements
-    let maxX = 0, maxY = 0;
-    elements.forEach(el => {
+
+    let maxX = 0,
+      maxY = 0;
+    elements.forEach((el) => {
       const w = parseInt(el.width || 100);
       const h = parseInt(el.height || 50);
       maxX = Math.max(maxX, (el.x || 0) + w);
       maxY = Math.max(maxY, (el.y || 0) + h);
     });
+
     const pad = 16;
     const availW = window.innerWidth - pad * 2;
     const availH = window.innerHeight - 120; // leave space for panels
@@ -34,15 +40,19 @@ export default function Canvas({
     const scaleY = maxY > 0 ? Math.min(1, availH / maxY) : 1;
     setScale(Math.min(scaleX, scaleY, 1));
   }, [elements]);
+
   const handleDrop = (e) => {
     e.preventDefault();
     const element = JSON.parse(e.dataTransfer.getData("element"));
     const rect = e.currentTarget.getBoundingClientRect();
 
+    const rawX = e.clientX - rect.left - 50;
+    const rawY = e.clientY - rect.top - 20;
+
     const newElement = {
       ...element,
-      x: e.clientX - rect.left - 50,
-      y: e.clientY - rect.top - 20,
+      x: snap(rawX),
+      y: snap(rawY),
     };
 
     setElements((prev) => [...prev, newElement]);
@@ -54,9 +64,9 @@ export default function Canvas({
 
   // Touch support for mobile drag-and-drop
   const handleTouchStart = (e) => {
-    const target = e.target.closest('[draggable]');
+    const target = e.target.closest("[draggable]");
     if (!target) return;
-    const elementData = target.getAttribute('data-element');
+    const elementData = target.getAttribute("data-element");
     if (!elementData) return;
     e.target._draggedElement = elementData;
   };
@@ -67,11 +77,16 @@ export default function Canvas({
     const canvas = e.currentTarget;
     const rect = canvas.getBoundingClientRect();
     const element = JSON.parse(e.target._draggedElement);
+
+    const rawX = touch.clientX - rect.left - 50;
+    const rawY = touch.clientY - rect.top - 20;
+
     const newElement = {
       ...element,
-      x: touch.clientX - rect.left - 50,
-      y: touch.clientY - rect.top - 20,
+      x: snap(rawX),
+      y: snap(rawY),
     };
+
     setElements((prev) => [...prev, newElement]);
     e.target._draggedElement = null;
   };
@@ -81,14 +96,11 @@ export default function Canvas({
       ref={canvasRef}
       className="flex-1 relative bg-gray-100 max-w-full min-h-[40vh] md:min-h-0 md:h-auto"
       style={{
-        width: '100vw',
-        height: 'calc(100vh - 120px)',
-        overflow: 'hidden',
-        padding: 0,
-        boxSizing: 'border-box',
-        touchAction: 'none',
-        position: 'relative',
-        margin: 0,
+        width: "100vw",
+        height: "calc(100vh - 120px)",
+        overflow: "hidden",
+        touchAction: "none",
+        position: "relative",
       }}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
@@ -96,14 +108,13 @@ export default function Canvas({
       onTouchEnd={handleTouchEnd}
     >
       <div
+        className="absolute left-0 top-0"
         style={{
           transform: `scale(${scale})`,
-          transformOrigin: 'top left',
-          width: '100%',
-          height: '100%',
-          position: 'absolute',
-          left: 0,
-          top: 0,
+          transformOrigin: "top left",
+          width: "100%",
+          height: "100%",
+          willChange: "transform",
         }}
       >
         {elements.map((el) => (
