@@ -1,9 +1,6 @@
-// src/components/Sidebar.jsx
 import React from "react";
 import { nanoid } from "nanoid";
 import { FiType, FiImage, FiSquare } from "react-icons/fi";
-
-const GRID_SIZE = 20;
 
 const elementsList = [
   {
@@ -12,10 +9,13 @@ const elementsList = [
     icon: FiType,
     defaultProps: {
       content: "Your Text Here",
-      fontSize: "20px",
-      color: "#1f2937",
-      width: "200px",
-      height: "40px", // avoid 'auto' for consistent rendering
+      styles: {
+        fontSize: "20px",
+        color: "#1f2937",
+        backgroundColor: "transparent",
+      },
+      width: 200,
+      height: 40,
     },
   },
   {
@@ -23,9 +23,10 @@ const elementsList = [
     label: "Image",
     icon: FiImage,
     defaultProps: {
-      src: "https://placehold.co/150x150", // fixed broken placeholder.com
-      width: "150px",
-      height: "150px",
+      src: "https://placehold.co/150x150",
+      width: 150,
+      height: 150,
+      styles: {},
     },
   },
   {
@@ -34,31 +35,39 @@ const elementsList = [
     icon: FiSquare,
     defaultProps: {
       content: "Click Me",
-      backgroundColor: "#4f46e5",
-      color: "#ffffff",
-      padding: "10px 20px",
-      width: "180px",
-      height: "50px",
+      styles: {
+        backgroundColor: "#4f46e5",
+        color: "#ffffff",
+        padding: "10px 20px",
+      },
+      width: 180,
+      height: 50,
     },
   },
 ];
 
 export default function Sidebar({ setElements }) {
+  // Function to prepare element data for drag-and-drop
   const handleDragStart = (e, element) => {
-    e.dataTransfer.setData("element", JSON.stringify(element));
+    // The id is generated here so each new element has a unique ID from the start
+    const dragElementData = {
+      ...element,
+      id: nanoid(),
+    };
+    e.dataTransfer.setData("element", JSON.stringify(dragElementData));
+    e.dataTransfer.effectAllowed = "copy";
   };
 
-  const snap = (value) => Math.round(value / GRID_SIZE) * GRID_SIZE;
-
+  // Function to add a new element to the canvas with a default position
   const addElementToCanvas = (el) => {
-    const element = {
+    const newElement = {
+      ...el.defaultProps,
       id: nanoid(),
       type: el.type,
-      x: snap(100),
-      y: snap(100),
-      ...el.defaultProps,
+      x: 20, // Default starting X position
+      y: 20, // Default starting Y position
     };
-    setElements((prev) => [...prev, element]);
+    setElements((prev) => [...prev, newElement]);
   };
 
   return (
@@ -69,18 +78,13 @@ export default function Sidebar({ setElements }) {
       <div className="space-y-2 md:space-y-4">
         {elementsList.map((el) => {
           const Icon = el.icon;
-          const draggableEl = {
-            id: nanoid(), // ensures each drag generates a new id
-            type: el.type,
-            ...el.defaultProps,
-          };
-
           return (
             <div
               key={el.type}
               draggable
-              onDragStart={(e) => handleDragStart(e, draggableEl)}
+              onDragStart={(e) => handleDragStart(e, el)}
               className="cursor-move p-2 md:p-3 border rounded-lg bg-gray-50 hover:bg-gray-100 transition flex items-center gap-2 text-base md:text-lg"
+              data-element={JSON.stringify({ ...el.defaultProps, type: el.type, id: nanoid() })}
             >
               <Icon className="text-gray-700 text-lg" />
               <span className="text-gray-800">{el.label}</span>

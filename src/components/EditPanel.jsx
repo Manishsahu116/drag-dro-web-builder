@@ -1,7 +1,13 @@
 // src/components/EditPanel.jsx
 import React from "react";
 
-const EditPanel = ({ selectedId, elements, updateElement }) => {
+const EditPanel = ({
+  selectedId,
+  elements,
+  updateElement,
+  showEditPanel,
+  setShowEditPanel,
+}) => {
   const selectedElement = elements.find((el) => el.id === selectedId);
   const styles = selectedElement?.styles || {};
 
@@ -14,101 +20,123 @@ const EditPanel = ({ selectedId, elements, updateElement }) => {
       ...styles,
       [property]: value,
     };
-
     updateElement(selectedId, { styles: updatedStyles });
   };
 
-  if (!selectedElement)
-    return (
-      <div className="w-full md:w-1/5 bg-white p-2 md:p-4 border-t md:border-t-0 md:border-l" />
-    );
+  if (!selectedElement) {
+    return null;
+  }
+
+  // Common input for number fields (x, y, width, height, etc.)
+  const NumberInput = ({ label, field, value, onChange }) => (
+    <div>
+      <label className="block mb-1 text-sm font-medium capitalize">
+        {label}
+      </label>
+      <input
+        type="number"
+        value={value ?? ""}
+        onChange={(e) => onChange(field, parseInt(e.target.value, 10) || 0)}
+        className="w-full p-2 border rounded text-sm"
+      />
+    </div>
+  );
+
+  // Common input for text fields
+  const TextInput = ({ label, value, onChange, placeholder = "" }) => (
+    <>
+      <label className="block mb-1 text-sm font-medium">{label}</label>
+      <input
+        type="text"
+        value={value || ""}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full mb-3 p-2 border rounded text-sm"
+        placeholder={placeholder}
+      />
+    </>
+  );
+
+  // Common input for color fields
+  const ColorInput = ({ label, value, onChange }) => (
+    <>
+      <label className="block mb-1 text-sm font-medium">{label}</label>
+      <input
+        type="color"
+        value={value || "#000000"}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full mb-4"
+      />
+    </>
+  );
 
   return (
-    <div className="w-full md:w-1/5 bg-white p-2 md:p-4 border-t md:border-t-0 md:border-l">
-      <h2 className="text-base md:text-lg font-semibold mb-4 text-gray-800">
-        Edit Element
-      </h2>
+    <div
+      className={`fixed md:static inset-y-0 right-0 z-40 bg-white w-full md:w-72 p-4 overflow-y-auto border-l shadow-lg transform transition-transform duration-300 ${
+        showEditPanel ? "translate-x-0" : "translate-x-full"
+      } md:translate-x-0`}
+      style={{ maxHeight: "100dvh" }}
+    >
+      {/* Mobile Close Button */}
+      <div className="flex justify-between items-center mb-4 md:hidden">
+        <h2 className="text-lg font-semibold text-gray-800">Edit Element</h2>
+        <button
+          onClick={() => setShowEditPanel(false)}
+          className="text-gray-900"
+          aria-label="Close edit panel"
+        >
+          ✕
+        </button>
+      </div>
 
       {/* Position & Size */}
       <div className="grid grid-cols-2 gap-2 mb-4">
-        <div>
-          <label className="block mb-1 text-sm font-medium">X</label>
-          <input
-            type="number"
-            value={selectedElement.x || 0}
-            onChange={(e) => handleChange("x", parseInt(e.target.value))}
-            className="w-full p-2 border rounded text-sm"
-          />
-        </div>
-        <div>
-          <label className="block mb-1 text-sm font-medium">Y</label>
-          <input
-            type="number"
-            value={selectedElement.y || 0}
-            onChange={(e) => handleChange("y", parseInt(e.target.value))}
-            className="w-full p-2 border rounded text-sm"
-          />
-        </div>
-        <div>
-          <label className="block mb-1 text-sm font-medium">Width</label>
-          <input
-            type="number"
-            value={
-              typeof selectedElement.width === "number"
-                ? selectedElement.width
-                : ""
-            }
-            onChange={(e) =>
-              handleChange("width", parseInt(e.target.value) || 100)
-            }
-            className="w-full p-2 border rounded text-sm"
-          />
-        </div>
-        <div>
-          <label className="block mb-1 text-sm font-medium">Height</label>
-          <input
-            type="number"
-            value={
-              typeof selectedElement.height === "number"
-                ? selectedElement.height
-                : ""
-            }
-            onChange={(e) =>
-              handleChange("height", parseInt(e.target.value) || 100)
-            }
-            className="w-full p-2 border rounded text-sm"
-          />
-        </div>
+        <NumberInput
+          label="x"
+          field="x"
+          value={selectedElement.x}
+          onChange={handleChange}
+        />
+        <NumberInput
+          label="y"
+          field="y"
+          value={selectedElement.y}
+          onChange={handleChange}
+        />
+        <NumberInput
+          label="width"
+          field="width"
+          value={selectedElement.width}
+          onChange={handleChange}
+        />
+        <NumberInput
+          label="height"
+          field="height"
+          value={selectedElement.height}
+          onChange={handleChange}
+        />
       </div>
 
-      {/* Text Element Settings */}
+      {/* Text Settings */}
       {selectedElement.type === "text" && (
         <>
-          <label className="block mb-1 text-sm font-medium">Text</label>
-          <input
-            type="text"
-            value={selectedElement.content || ""}
-            onChange={(e) => handleChange("content", e.target.value)}
-            className="w-full mb-3 p-2 border rounded text-sm"
+          <TextInput
+            label="Text"
+            value={selectedElement.content}
+            onChange={(value) => handleChange("content", value)}
           />
 
-          <label className="block mb-1 text-sm font-medium">Font Size</label>
-          <input
-            type="number"
-            value={
-              parseInt(styles.fontSize?.replace("px", "")) || 16
-            }
-            onChange={(e) =>
-              handleStyleChange("fontSize", `${e.target.value}px`)
-            }
-            className="w-full mb-4 p-2 border rounded"
+          <NumberInput
+            label="Font Size"
+            field="fontSize"
+            value={parseInt(styles.fontSize, 10) || 16}
+            onChange={(field, value) => handleStyleChange(field, `${value}px`)}
           />
 
           <label className="block mb-1 text-sm font-medium">Font Family</label>
           <select
             value={styles.fontFamily || "sans-serif"}
             onChange={(e) => handleStyleChange("fontFamily", e.target.value)}
-            className="w-full mb-4 p-2 border rounded"
+            className="w-full mb-3 p-2 border rounded"
           >
             <option value="sans-serif">Sans Serif</option>
             <option value="serif">Serif</option>
@@ -120,7 +148,7 @@ const EditPanel = ({ selectedId, elements, updateElement }) => {
           <select
             value={styles.textAlign || "left"}
             onChange={(e) => handleStyleChange("textAlign", e.target.value)}
-            className="w-full mb-4 p-2 border rounded"
+            className="w-full mb-3 p-2 border rounded"
           >
             <option value="left">Left</option>
             <option value="center">Center</option>
@@ -128,57 +156,41 @@ const EditPanel = ({ selectedId, elements, updateElement }) => {
             <option value="justify">Justify</option>
           </select>
 
-          <label className="block mb-1 text-sm font-medium">Text Color</label>
-          <input
-            type="color"
-            value={selectedElement.color || "#000000"}
-            onChange={(e) => handleChange("color", e.target.value)}
-            className="w-full mb-3"
+          <ColorInput
+            label="Text Color"
+            value={styles.color}
+            onChange={(value) => handleStyleChange("color", value)}
           />
         </>
       )}
 
-      {/* Image Element Settings */}
+      {/* Image Settings */}
       {selectedElement.type === "image" && (
-        <>
-          <label className="block mb-1 text-sm font-medium">Image URL</label>
-          <input
-            type="text"
-            value={selectedElement.src || ""}
-            onChange={(e) => handleChange("src", e.target.value)}
-            className="w-full mb-3 p-2 border rounded text-sm"
-            placeholder="https://..."
-          />
-        </>
+        <TextInput
+          label="Image URL"
+          value={selectedElement.src}
+          onChange={(value) => handleChange("src", value)}
+          placeholder="https://..."
+        />
       )}
 
-      {/* Button Element Settings */}
+      {/* Button Settings */}
       {selectedElement.type === "button" && (
         <>
-          <label className="block mb-1 text-sm font-medium">Button Text</label>
-          <input
-            type="text"
-            value={selectedElement.content || ""}
-            onChange={(e) => handleChange("content", e.target.value)}
-            className="w-full mb-3 p-2 border rounded text-sm"
+          <TextInput
+            label="Button Text"
+            value={selectedElement.content}
+            onChange={(value) => handleChange("content", value)}
           />
-
-          <label className="block mb-1 text-sm font-medium">
-            Background Color
-          </label>
-          <input
-            type="color"
-            value={selectedElement.backgroundColor || "#ffffff"}
-            onChange={(e) => handleChange("backgroundColor", e.target.value)}
-            className="w-full mb-3"
+          <ColorInput
+            label="Background Color"
+            value={styles.backgroundColor}
+            onChange={(value) => handleStyleChange("backgroundColor", value)}
           />
-
-          <label className="block mb-1 text-sm font-medium">Text Color</label>
-          <input
-            type="color"
-            value={selectedElement.color || "#000000"}
-            onChange={(e) => handleChange("color", e.target.value)}
-            className="w-full mb-3"
+          <ColorInput
+            label="Text Color"
+            value={styles.color}
+            onChange={(value) => handleStyleChange("color", value)}
           />
         </>
       )}

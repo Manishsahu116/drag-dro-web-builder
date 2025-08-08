@@ -3,7 +3,7 @@ import React, { useRef, useEffect, useState } from "react";
 import Element from "./Element";
 
 const GRID_SIZE = 20;
-const snap = (val) => Math.round(val / GRID_SIZE) * GRID_SIZE;
+const snapToGrid = (val) => Math.round(val / GRID_SIZE) * GRID_SIZE;
 
 export default function Canvas({
   elements,
@@ -13,9 +13,10 @@ export default function Canvas({
 }) {
   const canvasRef = useRef(null);
   const [scale, setScale] = useState(1);
+  const dragDataRef = useRef(null); // Ref to store element data during drag/touch
 
-  // Auto-scale content to fit mobile screen
-  useEffect(() => {
+  // Logic to calculate the correct scale for mobile view
+  const calculateScale = () => {
     const isMobile = window.innerWidth < 768;
     if (!isMobile) {
       setScale(1);
@@ -24,8 +25,9 @@ export default function Canvas({
 
     if (!canvasRef.current) return;
 
-    let maxX = 0,
-      maxY = 0;
+    // Find the max dimensions of the content
+    let maxX = 0;
+    let maxY = 0;
     elements.forEach((el) => {
       const w = parseInt(el.width || 100);
       const h = parseInt(el.height || 50);
@@ -33,22 +35,29 @@ export default function Canvas({
       maxY = Math.max(maxY, (el.y || 0) + h);
     });
 
-    const pad = 16;
-    const availW = window.innerWidth - pad * 2;
-    const availH = window.innerHeight - 120;
-    const scaleX = maxX > 0 ? Math.min(1, availW / maxX) : 1;
-    const scaleY = maxY > 0 ? Math.min(1, availH / maxY) : 1;
+    const padding = 16;
+    const availableWidth = window.innerWidth - padding * 2;
+    const availableHeight = window.innerHeight - 120; // Assuming a toolbar height
+    const scaleX = maxX > 0 ? Math.min(1, availableWidth / maxX) : 1;
+    const scaleY = maxY > 0 ? Math.min(1, availableHeight / maxY) : 1;
+    
+    // Set the scale to the smaller of the two to fit everything
     setScale(Math.min(scaleX, scaleY, 1));
+  };
+
+  useEffect(() => {
+    calculateScale();
+    window.addEventListener("resize", calculateScale);
+    return () => window.removeEventListener("resize", calculateScale);
   }, [elements]);
 
-  // Handle drop to add new element
-  const handleDrop = (e) => {
-    e.preventDefault();
-    const element = JSON.parse(e.dataTransfer.getData("element"));
-    const rect = e.currentTarget.getBoundingClientRect();
-
-    const rawX = (e.clientX - rect.left) / scale;
-    const rawY = (e.clientY - rect.top) / scale;
+  // Unified function to handle element creation after a drop or touch end
+  const addNewElement = (elementData, clientX, clientY) => {
+    const rect = canvasRef.current.getBoundingClientRect();
+    const element = JSON.parse(elementData);
+    
+    const rawX = (clientX - rect.left) / scale;
+    const rawY = (clientY - rect.top) / scale;
 
     const width = parseInt(element.width || 100);
     const height = parseInt(element.height || 50);
@@ -56,61 +65,62 @@ export default function Canvas({
     const newElement = {
       ...element,
       id: crypto.randomUUID(),
-      x: snap(rawX - width / 2),
-      y: snap(rawY - height / 2),
+      x: snapToGrid(rawX - width / 2),
+      y: snapToGrid(rawY - height / 2),
     };
 
     setElements((prev) => [...prev, newElement]);
   };
 
-  const handleDragOver = (e) => e.preventDefault();
+  const handleDrop = (e) => {
+    e.preventDefault();
+    const elementData = e.dataTransfer.getData("element");
+    if (!elementData) return;
 
-  // Touch support for adding elements
+    addNewElement(elementData, e.clientX, e.clientY);
+  };
+  
+  // Mobile drag-and-drop handling
   const handleTouchStart = (e) => {
     const target = e.target.closest("[draggable]");
     if (!target) return;
     const elementData = target.getAttribute("data-element");
-    if (!elementData) return;
-    e.target._draggedElement = elementData;
+    
+    // Store the element data in a ref for later use in touch end
+    if (elementData) {
+      dragDataRef.current = { data: elementData };
+    }
   };
 
   const handleTouchEnd = (e) => {
-    if (!e.target._draggedElement) return;
+    if (!dragDataRef.current) return;
+
     const touch = e.changedTouches[0];
-    const canvas = e.currentTarget;
-    const rect = canvas.getBoundingClientRect();
-    const element = JSON.parse(e.target._draggedElement);
-
-    const rawX = (touch.clientX - rect.left) / scale;
-    const rawY = (touch.clientY - rect.top) / scale;
-
-    const width = parseInt(element.width || 100);
-    const height = parseInt(element.height || 50);
-
-    const newElement = {
-      ...element,
-      id: crypto.randomUUID(),
-      x: snap(rawX - width / 2),
-      y: snap(rawY - height / 2),
-    };
-
-    setElements((prev) => [...prev, newElement]);
-    e.target._draggedElement = null;
+    addNewElement(dragDataRef.current.data, touch.clientX, touch.clientY);
+    dragDataRef.current = null; // Clear the ref
+  };
+  
+  // A helper function to manage the canvas click behavior
+  const handleCanvasClick = (e) => {
+    if (e.target === e.currentTarget) {
+      setSelectedId(null);
+    }
   };
 
   return (
     <div
       ref={canvasRef}
-      className="flex-1 relative bg-gray-100 max-w-full min-h-[40vh] md:min-h-0 md:h-auto"
+      className="flex-1 relative bg-gray-100 max-w-full"
       style={{
-        width: "100vw",
-        height: "calc(100vh - 120px)",
+        width: "100%", // Use a more flexible width
+        height: "100dvh", 
         overflow: "hidden",
-        touchAction: "none",
+        touchAction: "pan-x pan-y", // Allow native scrolling for mobile
         position: "relative",
       }}
       onDrop={handleDrop}
-      onDragOver={handleDragOver}
+      onDragOver={(e) => e.preventDefault()}
+      onClick={handleCanvasClick}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >

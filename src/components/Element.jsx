@@ -1,6 +1,10 @@
 // src/components/Element.jsx
-import React from "react";
+import React, { useRef } from "react";
 import { Rnd } from "react-rnd";
+
+const GRID_SIZE = 20;
+
+const snapToGrid = (value) => Math.round(value / GRID_SIZE) * GRID_SIZE;
 
 export default function Element({
   element,
@@ -8,35 +12,30 @@ export default function Element({
   setSelectedId,
   setElements,
 }) {
-  const GRID_SIZE = 20;
+  const dragStartRef = useRef({ x: 0, y: 0 });
+
+  const handleDragStart = (e, d) => {
+    dragStartRef.current = { x: d.x, y: d.y };
+  };
 
   const handleDragStop = (e, d) => {
-    const snappedX = Math.round(d.x / GRID_SIZE) * GRID_SIZE;
-    const snappedY = Math.round(d.y / GRID_SIZE) * GRID_SIZE;
-
     setElements((prev) =>
       prev.map((el) =>
-        el.id === element.id ? { ...el, x: snappedX, y: snappedY } : el
+        el.id === element.id ? { ...el, x: snapToGrid(d.x), y: snapToGrid(d.y) } : el
       )
     );
   };
 
   const handleResizeStop = (e, direction, ref, delta, position) => {
-    const snappedX = Math.round(position.x / GRID_SIZE) * GRID_SIZE;
-    const snappedY = Math.round(position.y / GRID_SIZE) * GRID_SIZE;
-
-    const snappedWidth = Math.round(ref.offsetWidth / GRID_SIZE) * GRID_SIZE;
-    const snappedHeight = Math.round(ref.offsetHeight / GRID_SIZE) * GRID_SIZE;
-
     setElements((prev) =>
       prev.map((el) =>
         el.id === element.id
           ? {
               ...el,
-              x: snappedX,
-              y: snappedY,
-              width: snappedWidth,
-              height: snappedHeight,
+              x: snapToGrid(position.x),
+              y: snapToGrid(position.y),
+              width: snapToGrid(ref.offsetWidth),
+              height: snapToGrid(ref.offsetHeight),
             }
           : el
       )
@@ -50,27 +49,28 @@ export default function Element({
 
   const handleDuplicate = () => {
     const offset = 40;
-    const newEl = {
-      ...JSON.parse(JSON.stringify(element)),
+
+    const cloned = {
+      ...element,
       id: crypto.randomUUID(),
       x: element.x + offset,
       y: element.y + offset,
     };
 
-    setElements((prev) => [...prev, newEl]);
-    setSelectedId(newEl.id);
+    setElements((prev) => [...prev, cloned]);
+    setSelectedId(cloned.id);
+  };
+
+  const commonStyle = {
+    fontFamily: element.styles?.fontFamily || "sans-serif",
+    fontSize: element.styles?.fontSize || "16px",
+    color: element.styles?.color || "#000",
+    textAlign: element.styles?.textAlign || "left",
+    width: "100%",
+    height: "100%",
   };
 
   const getContent = () => {
-    const commonStyle = {
-      fontFamily: element.styles?.fontFamily || "sans-serif",
-      fontSize: element.fontSize || 16,
-      color: element.color || "#000",
-      textAlign: element.styles?.textAlign || "left",
-      width: "100%",
-      height: "100%",
-    };
-
     switch (element.type) {
       case "text":
         return <div style={commonStyle}>{element.content}</div>;
@@ -79,7 +79,7 @@ export default function Element({
         return (
           <img
             src={element.src}
-            alt="Element"
+            alt={element.content || "Editable image"}
             className="w-full h-full object-contain rounded"
             draggable={false}
           />
@@ -91,11 +91,11 @@ export default function Element({
             className="w-full h-full rounded focus:outline-none"
             style={{
               ...commonStyle,
-              backgroundColor: element.backgroundColor || "#efefef",
+              backgroundColor: element.styles?.backgroundColor || "#efefef",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              padding: element.padding || "0.25rem 0.5rem",
+              padding: element.styles?.padding || "0.25rem 0.5rem",
             }}
           >
             {element.content}
@@ -110,7 +110,10 @@ export default function Element({
   return (
     <Rnd
       dragAxis="both"
-      snapGrid={[GRID_SIZE, GRID_SIZE]}
+      onDragStart={handleDragStart}
+      onDragStop={handleDragStop}
+      onResizeStop={handleResizeStop}
+      snapgrid={[GRID_SIZE, GRID_SIZE]}
       size={{
         width: element.width || 120,
         height: element.height || 50,
@@ -119,34 +122,23 @@ export default function Element({
         x: element.x,
         y: element.y,
       }}
-      onDragStop={handleDragStop}
-      onResizeStop={handleResizeStop}
       onClick={() => setSelectedId(element.id)}
       onTouchStart={() => setSelectedId(element.id)}
       bounds="parent"
-      enableResizing={{
-        top: true,
-        right: true,
-        bottom: true,
-        left: true,
-        topRight: true,
-        bottomRight: true,
-        bottomLeft: true,
-        topLeft: true,
-      }}
+      enableResizing={isSelected}
       className={`absolute group transition duration-200 ease-in-out ${
         isSelected ? "z-20" : "z-10"
       }`}
       style={{
         border: isSelected ? "2px solid #6366f1" : "none",
         backgroundColor:
-          element.type === "text" ? "transparent" : element.backgroundColor,
+          element.type === "text" ? "transparent" : element.styles?.backgroundColor,
         userSelect: "none",
         overflow: "visible",
+        touchAction: "none",
         borderRadius: 4,
       }}
     >
-      {/* Action buttons (duplicate/delete) */}
       {isSelected && (
         <div className="absolute -top-8 right-0 flex gap-1 z-30">
           <button
@@ -160,6 +152,7 @@ export default function Element({
             }}
             className="bg-gray-100 hover:bg-gray-200 text-sm px-2 py-1 rounded shadow border"
             style={{ touchAction: "manipulation" }}
+            aria-label="Duplicate element"
           >
             ⧉
           </button>
@@ -174,6 +167,7 @@ export default function Element({
             }}
             className="bg-red-100 hover:bg-red-200 text-sm px-2 py-1 rounded shadow border text-red-700"
             style={{ touchAction: "manipulation" }}
+            aria-label="Delete element"
           >
             ✕
           </button>
