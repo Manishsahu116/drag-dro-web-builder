@@ -15,7 +15,7 @@ const elementsList = [
       fontSize: "20px",
       color: "#1f2937",
       width: "200px",
-      height: "auto",
+      height: "40px", // avoid 'auto' for consistent rendering
     },
   },
   {
@@ -23,7 +23,7 @@ const elementsList = [
     label: "Image",
     icon: FiImage,
     defaultProps: {
-      src: "https://placehold.co/150x150",
+      src: "https://placehold.co/150x150", // fixed broken placeholder.com
       width: "150px",
       height: "150px",
     },
@@ -70,10 +70,11 @@ export default function Sidebar({ setElements }) {
         {elementsList.map((el) => {
           const Icon = el.icon;
           const draggableEl = {
-            id: nanoid(),
+            id: nanoid(), // ensures each drag generates a new id
             type: el.type,
             ...el.defaultProps,
           };
+
           return (
             <div
               key={el.type}
@@ -84,6 +85,7 @@ export default function Sidebar({ setElements }) {
               <Icon className="text-gray-700 text-lg" />
               <span className="text-gray-800">{el.label}</span>
               <button
+                type="button"
                 onClick={() => addElementToCanvas(el)}
                 className="text-sm text-indigo-600 hover:underline ml-auto"
               >

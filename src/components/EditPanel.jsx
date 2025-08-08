@@ -54,9 +54,9 @@ const EditPanel = ({ selectedId, elements, updateElement }) => {
           <input
             type="number"
             value={
-              selectedElement.width === "auto"
-                ? ""
-                : parseInt(selectedElement.width) || 100
+              typeof selectedElement.width === "number"
+                ? selectedElement.width
+                : ""
             }
             onChange={(e) =>
               handleChange("width", parseInt(e.target.value) || 100)
@@ -69,9 +69,9 @@ const EditPanel = ({ selectedId, elements, updateElement }) => {
           <input
             type="number"
             value={
-              selectedElement.height === "auto"
-                ? ""
-                : parseInt(selectedElement.height) || 100
+              typeof selectedElement.height === "number"
+                ? selectedElement.height
+                : ""
             }
             onChange={(e) =>
               handleChange("height", parseInt(e.target.value) || 100)
@@ -95,7 +95,9 @@ const EditPanel = ({ selectedId, elements, updateElement }) => {
           <label className="block mb-1 text-sm font-medium">Font Size</label>
           <input
             type="number"
-            value={parseInt(styles.fontSize) || 16}
+            value={
+              parseInt(styles.fontSize?.replace("px", "")) || 16
+            }
             onChange={(e) =>
               handleStyleChange("fontSize", `${e.target.value}px`)
             }
@@ -167,9 +169,7 @@ const EditPanel = ({ selectedId, elements, updateElement }) => {
           <input
             type="color"
             value={selectedElement.backgroundColor || "#ffffff"}
-            onChange={(e) =>
-              handleChange("backgroundColor", e.target.value)
-            }
+            onChange={(e) => handleChange("backgroundColor", e.target.value)}
             className="w-full mb-3"
           />
 

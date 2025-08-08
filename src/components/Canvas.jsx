@@ -35,34 +35,37 @@ export default function Canvas({
 
     const pad = 16;
     const availW = window.innerWidth - pad * 2;
-    const availH = window.innerHeight - 120; // leave space for panels
+    const availH = window.innerHeight - 120;
     const scaleX = maxX > 0 ? Math.min(1, availW / maxX) : 1;
     const scaleY = maxY > 0 ? Math.min(1, availH / maxY) : 1;
     setScale(Math.min(scaleX, scaleY, 1));
   }, [elements]);
 
+  // Handle drop to add new element
   const handleDrop = (e) => {
     e.preventDefault();
     const element = JSON.parse(e.dataTransfer.getData("element"));
     const rect = e.currentTarget.getBoundingClientRect();
 
-    const rawX = e.clientX - rect.left - 50;
-    const rawY = e.clientY - rect.top - 20;
+    const rawX = (e.clientX - rect.left) / scale;
+    const rawY = (e.clientY - rect.top) / scale;
+
+    const width = parseInt(element.width || 100);
+    const height = parseInt(element.height || 50);
 
     const newElement = {
       ...element,
-      x: snap(rawX),
-      y: snap(rawY),
+      id: crypto.randomUUID(),
+      x: snap(rawX - width / 2),
+      y: snap(rawY - height / 2),
     };
 
     setElements((prev) => [...prev, newElement]);
   };
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
-  };
+  const handleDragOver = (e) => e.preventDefault();
 
-  // Touch support for mobile drag-and-drop
+  // Touch support for adding elements
   const handleTouchStart = (e) => {
     const target = e.target.closest("[draggable]");
     if (!target) return;
@@ -78,13 +81,17 @@ export default function Canvas({
     const rect = canvas.getBoundingClientRect();
     const element = JSON.parse(e.target._draggedElement);
 
-    const rawX = touch.clientX - rect.left - 50;
-    const rawY = touch.clientY - rect.top - 20;
+    const rawX = (touch.clientX - rect.left) / scale;
+    const rawY = (touch.clientY - rect.top) / scale;
+
+    const width = parseInt(element.width || 100);
+    const height = parseInt(element.height || 50);
 
     const newElement = {
       ...element,
-      x: snap(rawX),
-      y: snap(rawY),
+      id: crypto.randomUUID(),
+      x: snap(rawX - width / 2),
+      y: snap(rawY - height / 2),
     };
 
     setElements((prev) => [...prev, newElement]);
