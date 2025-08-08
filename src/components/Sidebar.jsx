@@ -23,7 +23,7 @@ const elementsList = [
     label: "Image",
     icon: FiImage,
     defaultProps: {
-      src: "https://via.placeholder.com/150",
+      src: "https://placehold.co/150x150",
       width: "150px",
       height: "150px",
     },
