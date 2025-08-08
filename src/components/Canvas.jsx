@@ -1,9 +1,11 @@
-// src/components/Canvas.jsx
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback, memo } from "react";
 import Element from "./Element";
 
 const GRID_SIZE = 20;
 const snapToGrid = (val) => Math.round(val / GRID_SIZE) * GRID_SIZE;
+
+// Memoize the Element component to prevent unnecessary re-renders
+const MemoizedElement = memo(Element);
 
 export default function Canvas({
   elements,
@@ -13,19 +15,28 @@ export default function Canvas({
 }) {
   const canvasRef = useRef(null);
   const [scale, setScale] = useState(1);
-  const dragDataRef = useRef(null); // Ref to store element data during drag/touch
+  const dragDataRef = useRef(null);
+  
+  // Memoize the handler for state updates to ensure stability
+  const updateElementState = useCallback(
+    (newProps) => {
+      setElements((prev) =>
+        prev.map((el) => (el.id === newProps.id ? newProps : el))
+      );
+    },
+    [setElements]
+  );
 
-  // Logic to calculate the correct scale for mobile view
-  const calculateScale = () => {
+  // Memoize the scale calculation function
+  const calculateScale = useCallback(() => {
     const isMobile = window.innerWidth < 768;
     if (!isMobile) {
       setScale(1);
       return;
     }
 
-    if (!canvasRef.current) return;
+    if (!canvasRef.current || elements.length === 0) return;
 
-    // Find the max dimensions of the content
     let maxX = 0;
     let maxY = 0;
     elements.forEach((el) => {
@@ -37,40 +48,43 @@ export default function Canvas({
 
     const padding = 16;
     const availableWidth = window.innerWidth - padding * 2;
-    const availableHeight = window.innerHeight - 120; // Assuming a toolbar height
-    const scaleX = maxX > 0 ? Math.min(1, availableWidth / maxX) : 1;
-    const scaleY = maxY > 0 ? Math.min(1, availableHeight / maxY) : 1;
+    const availableHeight = window.innerHeight - 120;
+    const scaleX = maxX > 0 ? availableWidth / maxX : 1;
+    const scaleY = maxY > 0 ? availableHeight / maxY : 1;
     
-    // Set the scale to the smaller of the two to fit everything
+    // Set the scale to the smaller of the two, but not greater than 1
     setScale(Math.min(scaleX, scaleY, 1));
-  };
+  }, [elements]);
 
   useEffect(() => {
     calculateScale();
     window.addEventListener("resize", calculateScale);
     return () => window.removeEventListener("resize", calculateScale);
-  }, [elements]);
+  }, [calculateScale]);
 
-  // Unified function to handle element creation after a drop or touch end
-  const addNewElement = (elementData, clientX, clientY) => {
-    const rect = canvasRef.current.getBoundingClientRect();
-    const element = JSON.parse(elementData);
-    
-    const rawX = (clientX - rect.left) / scale;
-    const rawY = (clientY - rect.top) / scale;
+  // Memoize the function for adding new elements
+  const addNewElement = useCallback(
+    (elementData, clientX, clientY) => {
+      const rect = canvasRef.current.getBoundingClientRect();
+      const element = JSON.parse(elementData);
+      
+      const rawX = (clientX - rect.left) / scale;
+      const rawY = (clientY - rect.top) / scale;
 
-    const width = parseInt(element.width || 100);
-    const height = parseInt(element.height || 50);
+      const width = parseInt(element.width || 120);
+      const height = parseInt(element.height || 50);
 
-    const newElement = {
-      ...element,
-      id: crypto.randomUUID(),
-      x: snapToGrid(rawX - width / 2),
-      y: snapToGrid(rawY - height / 2),
-    };
+      const newElement = {
+        ...element,
+        id: crypto.randomUUID(),
+        x: snapToGrid(rawX - width / 2),
+        y: snapToGrid(rawY - height / 2),
+      };
 
-    setElements((prev) => [...prev, newElement]);
-  };
+      setElements((prev) => [...prev, newElement]);
+    },
+    [setElements, scale]
+  );
 
   const handleDrop = (e) => {
     e.preventDefault();
@@ -80,27 +94,31 @@ export default function Canvas({
     addNewElement(elementData, e.clientX, e.clientY);
   };
   
-  // Mobile drag-and-drop handling
   const handleTouchStart = (e) => {
     const target = e.target.closest("[draggable]");
     if (!target) return;
     const elementData = target.getAttribute("data-element");
     
-    // Store the element data in a ref for later use in touch end
     if (elementData) {
       dragDataRef.current = { data: elementData };
     }
   };
 
   const handleTouchEnd = (e) => {
-    if (!dragDataRef.current) return;
+    if (!dragDataRef.current || !canvasRef.current) return;
 
     const touch = e.changedTouches[0];
-    addNewElement(dragDataRef.current.data, touch.clientX, touch.clientY);
-    dragDataRef.current = null; // Clear the ref
+    const rect = canvasRef.current.getBoundingClientRect();
+    
+    // Check if the drop was inside the canvas
+    if (touch.clientX > rect.left && touch.clientX < rect.right &&
+        touch.clientY > rect.top && touch.clientY < rect.bottom) {
+      addNewElement(dragDataRef.current.data, touch.clientX, touch.clientY);
+    }
+    
+    dragDataRef.current = null;
   };
   
-  // A helper function to manage the canvas click behavior
   const handleCanvasClick = (e) => {
     if (e.target === e.currentTarget) {
       setSelectedId(null);
@@ -112,11 +130,11 @@ export default function Canvas({
       ref={canvasRef}
       className="flex-1 relative bg-gray-100 max-w-full"
       style={{
-        width: "100%", // Use a more flexible width
-        height: "100dvh", 
+        height: "100dvh",
         overflow: "hidden",
-        touchAction: "pan-x pan-y", // Allow native scrolling for mobile
         position: "relative",
+        userSelect: "none",
+        touchAction: "pan-x pan-y",
       }}
       onDrop={handleDrop}
       onDragOver={(e) => e.preventDefault()}
@@ -125,17 +143,15 @@ export default function Canvas({
       onTouchEnd={handleTouchEnd}
     >
       <div
-        className="absolute left-0 top-0"
+        className="absolute left-0 top-0 w-full h-full"
         style={{
           transform: `scale(${scale})`,
           transformOrigin: "top left",
-          width: "100%",
-          height: "100%",
           willChange: "transform",
         }}
       >
         {elements.map((el) => (
-          <Element
+          <MemoizedElement
             key={el.id}
             element={el}
             isSelected={selectedId === el.id}

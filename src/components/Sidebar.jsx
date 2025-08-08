@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, memo } from "react";
 import { nanoid } from "nanoid";
 import { FiType, FiImage, FiSquare } from "react-icons/fi";
 
@@ -46,29 +46,54 @@ const elementsList = [
   },
 ];
 
+const SidebarItem = memo(({ element, addElementToCanvas, handleDragStart }) => {
+  const Icon = element.icon;
+
+  return (
+    <div
+      draggable
+      onDragStart={(e) => handleDragStart(e, element)}
+      className="cursor-move p-2 md:p-3 border rounded-lg bg-gray-50 hover:bg-gray-100 transition flex items-center gap-2 text-base md:text-lg"
+      data-element={JSON.stringify({ ...element.defaultProps, type: element.type })}
+      // For mobile drag-and-drop consistency, the `data-element` should not have an ID here.
+    >
+      <Icon className="text-gray-700 text-lg" />
+      <span className="text-gray-800">{element.label}</span>
+      <button
+        type="button"
+        onClick={() => addElementToCanvas(element)}
+        className="text-sm text-indigo-600 hover:underline ml-auto"
+        aria-label={`Add ${element.label.toLowerCase()} to canvas`}
+      >
+        Add
+      </button>
+    </div>
+  );
+});
+
 export default function Sidebar({ setElements }) {
-  // Function to prepare element data for drag-and-drop
-  const handleDragStart = (e, element) => {
-    // The id is generated here so each new element has a unique ID from the start
+  // Memoize handlers to prevent unnecessary re-renders
+  const handleDragStart = useCallback((e, element) => {
+    // Generate a unique ID only when the drag starts
     const dragElementData = {
-      ...element,
+      ...element.defaultProps,
+      type: element.type,
       id: nanoid(),
     };
     e.dataTransfer.setData("element", JSON.stringify(dragElementData));
     e.dataTransfer.effectAllowed = "copy";
-  };
+  }, []);
 
-  // Function to add a new element to the canvas with a default position
-  const addElementToCanvas = (el) => {
+  const addElementToCanvas = useCallback((el) => {
     const newElement = {
       ...el.defaultProps,
       id: nanoid(),
       type: el.type,
-      x: 20, // Default starting X position
-      y: 20, // Default starting Y position
+      x: 20,
+      y: 20,
     };
     setElements((prev) => [...prev, newElement]);
-  };
+  }, [setElements]);
 
   return (
     <div className="w-full md:w-1/5 min-w-0 md:min-w-[200px] bg-white shadow-md border-b md:border-b-0 md:border-r p-2 md:p-4 max-h-60 md:max-h-screen overflow-auto flex-shrink-0">
@@ -76,28 +101,14 @@ export default function Sidebar({ setElements }) {
         Elements
       </h2>
       <div className="space-y-2 md:space-y-4">
-        {elementsList.map((el) => {
-          const Icon = el.icon;
-          return (
-            <div
-              key={el.type}
-              draggable
-              onDragStart={(e) => handleDragStart(e, el)}
-              className="cursor-move p-2 md:p-3 border rounded-lg bg-gray-50 hover:bg-gray-100 transition flex items-center gap-2 text-base md:text-lg"
-              data-element={JSON.stringify({ ...el.defaultProps, type: el.type, id: nanoid() })}
-            >
-              <Icon className="text-gray-700 text-lg" />
-              <span className="text-gray-800">{el.label}</span>
-              <button
-                type="button"
-                onClick={() => addElementToCanvas(el)}
-                className="text-sm text-indigo-600 hover:underline ml-auto"
-              >
-                Add
-              </button>
-            </div>
-          );
-        })}
+        {elementsList.map((el) => (
+          <SidebarItem
+            key={el.type}
+            element={el}
+            addElementToCanvas={addElementToCanvas}
+            handleDragStart={handleDragStart}
+          />
+        ))}
       </div>
     </div>
   );

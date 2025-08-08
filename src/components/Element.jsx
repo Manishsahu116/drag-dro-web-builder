@@ -13,7 +13,6 @@ const Element = React.memo(function Element({
   const { id, type, content, src, x, y, width, height, styles = {} } = element;
   const { fontFamily, fontSize, color, textAlign, backgroundColor, padding } = styles;
 
-  // Use useCallback to memoize handlers
   const handleUpdateElements = useCallback(
     (newProps) => {
       setElements((prev) =>
@@ -157,14 +156,30 @@ const Element = React.memo(function Element({
       {isSelected && (
         <div className="absolute -top-8 right-0 flex gap-1 z-30">
           <button
-            onClick={(e) => { e.stopPropagation(); handleDuplicate(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDuplicate();
+            }}
+            // Added onTouchEnd to handle mobile taps
+            onTouchEnd={(e) => {
+              e.stopPropagation();
+              handleDuplicate();
+            }}
             className="bg-gray-100 hover:bg-gray-200 text-sm px-2 py-1 rounded shadow border"
             aria-label="Duplicate element"
           >
             ⧉
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); handleDelete(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete();
+            }}
+            // Added onTouchEnd to handle mobile taps
+            onTouchEnd={(e) => {
+              e.stopPropagation();
+              handleDelete();
+            }}
             className="bg-red-100 hover:bg-red-200 text-sm px-2 py-1 rounded shadow border text-red-700"
             aria-label="Delete element"
           >
